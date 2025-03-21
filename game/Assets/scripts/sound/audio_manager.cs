@@ -52,7 +52,7 @@ public class audio_manager : MonoBehaviour
         }
         else
         {
-            sfxSource.PlayOneShot(s.clip);
+            //sfxSource.PlayOneShot(s.clip);
             sfxSource.pitch = pitch; // Apply custom pitch
             sfxSource.PlayOneShot(s.clip);
         }

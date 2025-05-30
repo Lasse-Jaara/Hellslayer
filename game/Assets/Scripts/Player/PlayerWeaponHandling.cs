@@ -2,10 +2,14 @@ using UnityEngine;
 
 public class PlayerWeaponHandler : MonoBehaviour
 {
-    public Transform handPosition; // Assign a GameObject in the player (e.g., "Hand") or find it by tag
+    [Tooltip("Assign the transform where the weapon should be held (e.g., HandPositionForWeapons)")]
+    public Transform handPosition; // Drag HandPositionForWeapons here or set the tag
+
+    private GameObject currentWeapon;
 
     private void Awake()
     {
+        // Try to find handPosition by tag if not assigned
         if (handPosition == null)
         {
             GameObject handObject = GameObject.FindGameObjectWithTag("handPosition");
@@ -15,20 +19,31 @@ public class PlayerWeaponHandler : MonoBehaviour
             }
             else
             {
-                Debug.LogError("Hand position object with tag 'handPosition' not found!");
+                Debug.LogError("Hand position object with tag 'handPosition' not found! Please assign it in the Inspector or tag it correctly.");
             }
         }
     }
-    private GameObject currentWeapon;
 
     public void EquipWeapon(GameObject weaponPrefab)
     {
-        if (currentWeapon != null)
+        if (handPosition == null)
         {
-            Destroy(currentWeapon); // Remove existing weapon
+            Debug.LogWarning("Cannot equip weapon: handPosition is not set.");
+            return;
         }
 
-        currentWeapon = Instantiate(weaponPrefab, handPosition.position, handPosition.rotation);
-        currentWeapon.transform.SetParent(handPosition); // Attach to player's hand
+        // Destroy the currently held weapon if any
+        if (currentWeapon != null)
+        {
+            Destroy(currentWeapon);
+        }
+
+        // Instantiate the new weapon and parent it to the hand
+        currentWeapon = Instantiate(weaponPrefab);
+        currentWeapon.transform.SetParent(handPosition);
+
+        // Align it properly
+        currentWeapon.transform.localPosition = Vector3.zero;
+        currentWeapon.transform.localRotation = Quaternion.identity;
     }
 }

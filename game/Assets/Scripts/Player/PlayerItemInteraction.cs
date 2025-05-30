@@ -3,24 +3,21 @@ using UnityEngine.InputSystem;
 
 public class PlayerInteraction : MonoBehaviour
 {
-    public float interactionRange = 8.5f; 
-    public InputAction pickupAction;
-    public InputAction dropAction;
+    public float interactionRange = 8.5f;
     private Camera playerCamera;
     private bool OnHand = false;
 
     [SerializeField] private PlayerInputManager getInput;
     [SerializeField] private Transform handPosition;
     [SerializeField] private ItemSlotHandler itemSlotHandler;
-    [SerializeField] private string crimson_sword = "crimson_sword";
-    [SerializeField] private string katana = "katana";
-    [SerializeField] private string rpg = "rpg";
+    public SkinnedMeshRenderer skinnedMeshRenderer;
 
     public TestItem currentlyHeldItem;
 
     private void Start()
     {
         playerCamera = GameObject.FindWithTag("playerCamera")?.GetComponent<Camera>();
+
         if (playerCamera == null)
             Debug.LogError("Camera with tag 'playerCamera' not found.");
         if (getInput == null)
@@ -43,7 +40,11 @@ public class PlayerInteraction : MonoBehaviour
                 if (getInput.PickupInput.WasPressedThisFrame())
                 {
                     itemSlotHandler.PickUpItem(item);
-                    item.PickupInput();
+                    item.PickupInput(handPosition);      // 🔧 Use correct overload
+                    MoveItemToHand(item);               // 🔧 Handle parenting and colliders
+
+                    Transform child = transform.Find("rpg");
+                    EnableWeaponScript(item.gameObject); // 🔧 Enable weapon behavior
                 }
             }
         }
@@ -63,14 +64,33 @@ public class PlayerInteraction : MonoBehaviour
             itemSlotHandler.SwitchSlot(2);
         }
     }
-
+    private void HideArmsMesh(bool value)
+    {
+        if (value)
+        {
+            if (skinnedMeshRenderer != null)
+            {
+                skinnedMeshRenderer.enabled = false; // or true to enable
+            }
+        }
+        else
+        {
+            if (skinnedMeshRenderer != null)
+            {
+                skinnedMeshRenderer.enabled = true; // or false to disable
+            }
+        }
+    }
     private void MoveItemToHand(TestItem item)
     {
+        HideArmsMesh(true); // Hide arms mesh when picking up an item
         Rigidbody rb = item.GetComponent<Rigidbody>();
         if (rb != null)
             rb.isKinematic = true;
 
         item.transform.SetParent(handPosition);
+        item.transform.localPosition = item.ItemPosition;
+        item.transform.localRotation = item.ItemRotation;
 
         foreach (Collider collider in item.GetComponents<Collider>())
             collider.enabled = false;
@@ -81,11 +101,13 @@ public class PlayerInteraction : MonoBehaviour
 
     public void DropItem()
     {
+        HideArmsMesh(false);
         if (currentlyHeldItem == null) return;
 
         Rigidbody rb = currentlyHeldItem.GetComponent<Rigidbody>();
         if (rb != null)
             rb.isKinematic = false;
+            rb.detectCollisions = true;
 
         currentlyHeldItem.transform.SetParent(null);
 
@@ -97,63 +119,54 @@ public class PlayerInteraction : MonoBehaviour
 
         Debug.Log($"{currentlyHeldItem.itemName} has been dropped.");
 
-        // Disable weapon scripts on dropped item
         DisableWeaponScript(currentlyHeldItem.gameObject);
 
         currentlyHeldItem = null;
     }
 
-public void EnableWeaponScript(GameObject itemObject)
-{
-    // Disable all other RPG and LaserDesertEagle scripts on other items
-    RPG[] allRPGs = Object.FindObjectsByType<RPG>(FindObjectsSortMode.None);
-    foreach (RPG rpgScript in allRPGs)
+    public void EnableWeaponScript(GameObject itemObject)
     {
-        rpgScript.enabled = false;
+        RPG[] allRPGs = Object.FindObjectsByType<RPG>(FindObjectsSortMode.None);
+        foreach (RPG rpg in allRPGs) rpg.enabled = false;
+
+        LaserDesertEagle[] allLasers = Object.FindObjectsByType<LaserDesertEagle>(FindObjectsSortMode.None);
+        foreach (LaserDesertEagle laser in allLasers)
+        {
+            laser.enabled = false;
+            laser.SetEquipped(false);
+        }
+
+        RPG thisRPG = itemObject.GetComponent<RPG>();
+        if (thisRPG != null)
+        {
+            thisRPG.enabled = true;
+            Debug.Log("Enabled RPG script on equipped item.");
+        }
+
+        LaserDesertEagle thisLaser = itemObject.GetComponent<LaserDesertEagle>();
+        if (thisLaser != null)
+        {
+            thisLaser.enabled = true;
+            thisLaser.SetEquipped(true);
+            Debug.Log("Enabled LaserDesertEagle script on equipped item.");
+        }
     }
 
-    LaserDesertEagle[] allLasers = Object.FindObjectsByType<LaserDesertEagle>(FindObjectsSortMode.None);
-    foreach (LaserDesertEagle laser in allLasers)
+    public void DisableWeaponScript(GameObject itemObject)
     {
-        laser.enabled = false;
-        laser.SetEquipped(false); // Hide ammo and cancel reload for all
+        RPG rpgScript = itemObject.GetComponent<RPG>();
+        if (rpgScript != null)
+        {
+            rpgScript.enabled = false;
+            Debug.Log("Disabled RPG script on dropped item.");
+        }
+
+        LaserDesertEagle laser = itemObject.GetComponent<LaserDesertEagle>();
+        if (laser != null)
+        {
+            laser.enabled = false;
+            laser.SetEquipped(false);
+            Debug.Log("Disabled LaserDesertEagle script on dropped item.");
+        }
     }
-
-    // Enable RPG script if present
-    RPG thisRPG = itemObject.GetComponent<RPG>();
-    if (thisRPG != null)
-    {
-        thisRPG.enabled = true;
-        Debug.Log("Enabled RPG script on equipped item.");
-    }
-
-    // Enable LaserDesertEagle script if present
-    LaserDesertEagle thisLaser = itemObject.GetComponent<LaserDesertEagle>();
-    if (thisLaser != null)
-    {
-        thisLaser.enabled = true;
-        thisLaser.SetEquipped(true); // Show ammo for equipped weapon
-        Debug.Log("Enabled LaserDesertEagle script on equipped item.");
-    }
-}
-
-public void DisableWeaponScript(GameObject itemObject)
-{
-    RPG rpgScript = itemObject.GetComponent<RPG>();
-    if (rpgScript != null)
-    {
-        rpgScript.enabled = false;
-        Debug.Log("Disabled RPG script on dropped item.");
-    }
-
-    LaserDesertEagle laser = itemObject.GetComponent<LaserDesertEagle>();
-    if (laser != null)
-    {
-        laser.enabled = false;
-        laser.SetEquipped(false); // Hide ammo and cancel reload
-        Debug.Log("Disabled LaserDesertEagle script on dropped item.");
-    }
-}
-
-
 }

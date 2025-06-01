@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class Rocket : MonoBehaviour
 {
@@ -6,8 +7,8 @@ public class Rocket : MonoBehaviour
     [SerializeField] private float turnSpeed = 5f;
     [SerializeField] private float rocketSpeed = 50f;
     [SerializeField] private float explosionRadius = 5f;
-    [SerializeField] private int damageValue = 20; // Match TestItem
-    [SerializeField] private LayerMask enemyLayer; // Must be set to "enemyLayer" in Inspector
+    [SerializeField] private int damageValue = 20;
+    [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private GameObject explosionEffectPrefab;
 
     private Transform target;
@@ -21,12 +22,11 @@ public class Rocket : MonoBehaviour
 
     private void Start()
     {
-        Invoke(nameof(Explode), lifetime); // Trigger explosion after lifetime ends
+        Invoke(nameof(Explode), lifetime);
 
         rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
-            // rb.useGravity = false;
             rb.linearVelocity = transform.forward * rocketSpeed;
         }
 
@@ -81,6 +81,7 @@ public class Rocket : MonoBehaviour
     {
         if (hasExploded) return;
         hasExploded = true;
+        CancelInvoke();
 
         if (explosionEffectPrefab != null)
         {
@@ -88,12 +89,14 @@ public class Rocket : MonoBehaviour
             Instantiate(explosionEffectPrefab, transform.position, Quaternion.identity);
         }
 
-        // Damage enemies in explosion radius
+        // Damage enemies in explosion radius only once
         Collider[] hits = Physics.OverlapSphere(transform.position, explosionRadius, enemyLayer);
+        HashSet<EnemyHealth> damagedEnemies = new HashSet<EnemyHealth>();
+
         foreach (Collider hit in hits)
         {
             EnemyHealth enemyHealth = hit.GetComponentInParent<EnemyHealth>();
-            if (enemyHealth != null)
+            if (enemyHealth != null && damagedEnemies.Add(enemyHealth))
             {
                 enemyHealth.TakeDamage(damageValue);
                 Debug.Log($"Rocket hit {hit.name}, dealing {damageValue} damage.");

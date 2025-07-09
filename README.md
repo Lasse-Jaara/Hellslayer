@@ -1,10 +1,10 @@
 # Hellslayer
 
-**Hellslayer** is a prototype built using **unity**.
+**Hellslayer** is a playable Demo built using **Unity**.
 
 ## 📦 Current Status: Archived
 
-This project was built as a learning exercise to explore new tools, techniques, or game mechanics.
+This project was built as a learning exercise to explore new tools, techniques, or game mechanics and working with team using trello and others tools.
 Development is now archived, with no plans for further updates — but it remains available for reference or inspiration.
 
 ## 🛠️ Tech Stack
@@ -12,6 +12,7 @@ Development is now archived, with no plans for further updates — but it remain
 - **C#**
 - **Unity**
 - **Blender**
+- **Trello**
 
 ## 🎯 Purpose/Goal
 
